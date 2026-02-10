@@ -90,6 +90,8 @@ sds sdsnewlen(const void *init, size_t initlen) {
     int hdrlen = sdsHdrSize(type);
     unsigned char *fp; /* flags pointer. */
 
+    /* Catch size_t overflow to prevent integer overflow vulnerability (CVE-2021-21309) */
+    if (initlen + hdrlen + 1 <= initlen) return NULL;
     sh = s_malloc(hdrlen+initlen+1);
     if (sh == NULL) return NULL;
     if (!init)
@@ -206,6 +208,8 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     len = sdslen(s);
     sh = (char*)s-sdsHdrSize(oldtype);
     newlen = (len+addlen);
+    /* Catch size_t overflow to prevent integer overflow vulnerability (CVE-2021-21309) */
+    if (newlen <= len) return NULL;
     if (newlen < SDS_MAX_PREALLOC)
         newlen *= 2;
     else
@@ -219,6 +223,8 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     if (type == SDS_TYPE_5) type = SDS_TYPE_8;
 
     hdrlen = sdsHdrSize(type);
+    /* Catch size_t overflow for hdrlen+newlen+1 (CVE-2021-21309) */
+    if (hdrlen + newlen + 1 <= newlen) return NULL;
     if (oldtype==type) {
         newsh = s_realloc(sh, hdrlen+newlen+1);
         if (newsh == NULL) return NULL;
